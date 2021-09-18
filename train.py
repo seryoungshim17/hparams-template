@@ -1,5 +1,7 @@
+from tqdm import tqdm
 import torch
-from train import calculateAcc
+from functions import calculateAcc
+
 class Train():
     def __init__(self, model, num_classes, trainloader, valloader):
         self.model = model
@@ -7,7 +9,7 @@ class Train():
         self.trainloader = trainloader
         self.valloader = valloader
         
-    def train(self, optim, learning_rate=1e-5, epochs=20, writer=None):
+    def train(self, optim, device, learning_rate=1e-5, epochs=20):
         optims = {
             'Adam': torch.optim.Adam,
             'SGD': torch.optim.SGD
@@ -27,7 +29,7 @@ class Train():
                 y_pred = self.model(X_batch)
 
                 loss = criterion(y_pred, y_batch.squeeze())
-                acc = calculateAcc(y_pred, y_batch.squeeze(), num_classes=num_classes)
+                acc = calculateAcc(y_pred, y_batch.squeeze(), num_classes=self.num_classes)
 
                 loss.backward()
                 optimizer.step()
@@ -44,7 +46,7 @@ class Train():
 
                     yhat = self.model(x_val)  
                     val_loss += criterion(yhat, y_val.squeeze()).item()
-                    acc = calculateAcc(yhat, y_val.squeeze(), num_classes=num_classes)
+                    acc = calculateAcc(yhat, y_val.squeeze(), num_classes=self.num_classes)
                     val_acc += acc[0]
                     val_f1_score += acc[1]
 
@@ -55,7 +57,9 @@ class Train():
                     'epoch': e,
                     'model_state_dict': self.model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
-                    'loss': val_loss,
+                    'loss': val_loss/len(self.trainloader),
+                    'acc': val_acc/len(self.trainloader),
+                    'f1': val_f1_score/len(self.trainloader)
                 }
                 print("best weight updated")
         
